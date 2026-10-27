@@ -13,6 +13,7 @@ import { Component, Mixins, Prop } from 'vue-property-decorator'
 import BaseMixin from '@/components/mixins/base'
 import { FileStateGcodefile } from '@/store/files/types'
 import { defaultBigThumbnailBackground, thumbnailBigMin } from '@/store/variables'
+import { escapePath } from '@/plugins/helpers'
 
 @Component
 export default class StartPrintDialogThumbnail extends Mixins(BaseMixin) {
@@ -40,6 +41,11 @@ export default class StartPrintDialogThumbnail extends Mixins(BaseMixin) {
     }
 
     get currentPathWithoutSlash() {
+        // Status/History panel items already carry the full relative path in `filename`.
+        const lastSlashPos = this.file.filename.lastIndexOf('/')
+        if (lastSlashPos > 0) return this.file.filename.slice(0, lastSlashPos)
+
+        // Gcodefiles panel items are basename-only; currentPath supplies the folder.
         if (this.currentPath.startsWith('/')) return this.currentPath.substring(1)
 
         return this.currentPath
@@ -51,10 +57,9 @@ export default class StartPrintDialogThumbnail extends Mixins(BaseMixin) {
 
     get bigThumbnailUrl() {
         if (this.bigThumbnail === undefined || !('relative_path' in this.bigThumbnail)) return null
-
         const baseArray = [this.apiUrl, 'server/files/gcodes']
-        if (this.currentPathWithoutSlash) baseArray.push(this.currentPathWithoutSlash)
-        baseArray.push(this.bigThumbnail.relative_path)
+        if (this.currentPathWithoutSlash) baseArray.push(escapePath(this.currentPathWithoutSlash))
+        baseArray.push(escapePath(this.bigThumbnail.relative_path))
         const baseUrl = baseArray.join('/')
 
         return `${baseUrl}?timestamp=${this.fileTimestamp}`

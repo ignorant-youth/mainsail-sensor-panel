@@ -471,15 +471,15 @@ export default class TheSelectPrinterDialog extends Mixins(BaseMixin) {
             (normPath.length > 0 ? `/${normPath}` : '') +
             '/websocket'
         this.$socket.setUrl(url)
-        this.$socket.connect()
+        this.$socket.reconnect()
     }
 
     reconnect() {
-        this.$store.dispatch('socket/setData', { connectingFailed: false })
-        this.$socket.connect()
+        this.$socket.reconnect()
     }
 
     switchToChangePrinter() {
+        this.$socket.close()
         this.$store.dispatch('socket/setData', { connectingFailed: false })
     }
 
@@ -495,8 +495,8 @@ export default class TheSelectPrinterDialog extends Mixins(BaseMixin) {
         this.$store.dispatch('gui/remoteprinters/initFromLocalstorage').then(() => {
             if (!('printer' in this.$route.query)) return
 
-            let name = this.$route.query.printer.toString().toLowerCase()
-            let matching = this.printers.filter(
+            const name = this.$route.query.printer.toString().toLowerCase()
+            const matching = this.printers.filter(
                 (printer: GuiRemoteprintersStatePrinter) => printer.name?.toLowerCase() === name
             )
 

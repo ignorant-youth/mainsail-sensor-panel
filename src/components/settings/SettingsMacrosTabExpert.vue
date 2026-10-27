@@ -1,11 +1,11 @@
 <template>
     <div>
-        <template v-if="boolFormEdit === false">
+        <template v-if="!boolFormEdit">
             <v-card-text>
                 <h3 class="text-h5 mb-3">{{ $t('Settings.MacrosTab.Macrogroups') }}</h3>
                 <template v-if="groups.length">
                     <div v-for="(group, index) in groups" :key="index">
-                        <v-divider v-if="index" class="my-2"></v-divider>
+                        <v-divider v-if="index" class="my-2" />
                         <settings-row
                             :title="group.name !== '' ? group.name : '<' + $t('Settings.MacrosTab.UnknownGroup') + '>'"
                             :sub-title="
@@ -51,9 +51,9 @@
                         :rules="[rules.required, rules.groupUnique]"
                         dense
                         outlined
-                        @change="updateGroupOptionName"></v-text-field>
+                        @change="updateGroupOptionName" />
                 </settings-row>
-                <v-divider class="my-2"></v-divider>
+                <v-divider class="my-2" />
                 <settings-row :title="$t('Settings.MacrosTab.Color')">
                     <v-select
                         v-model="editGroup.color"
@@ -62,10 +62,10 @@
                         dense
                         hide-details
                         attach
-                        @change="updateGroupOptionColor"></v-select>
+                        @change="updateGroupOptionColor" />
                 </settings-row>
                 <template v-if="editGroup?.color === 'custom'">
-                    <v-divider class="my-2"></v-divider>
+                    <v-divider class="my-2" />
                     <settings-row :title="$t('Settings.MacrosTab.CustomColor')">
                         <v-menu bottom left offset-y :close-on-content-click="false">
                             <template #activator="{ on, attrs }">
@@ -74,17 +74,17 @@
                                     :color="editGroup.colorCustom"
                                     class="minwidth-0 px-5"
                                     small
-                                    v-on="on"></v-btn>
+                                    v-on="on" />
                             </template>
                             <v-color-picker
                                 :value="editGroup.colorCustom"
                                 hide-mode-switch
                                 mode="rgba"
-                                @update:color="updateGroupOptionColorCustom"></v-color-picker>
+                                @update:color="updateGroupOptionColorCustom" />
                         </v-menu>
                     </settings-row>
                 </template>
-                <v-divider class="my-2"></v-divider>
+                <v-divider class="my-2" />
                 <settings-row :title="$t('Settings.MacrosTab.Status')">
                     <v-tooltip top>
                         <template #activator="{ on, attrs }">
@@ -132,7 +132,7 @@
                         <span>{{ $t('Settings.MacrosTab.ShowInStatePrinting') }}</span>
                     </v-tooltip>
                 </settings-row>
-                <v-divider class="my-2"></v-divider>
+                <v-divider class="my-2" />
                 <h3 class="text-h5 mt-6 mb-3">{{ $t('Settings.MacrosTab.GroupMacros') }}</h3>
                 <template v-if="editGroup?.macros && editGroup?.macros?.length">
                     <draggable
@@ -326,6 +326,8 @@ import {
     mdiPencil,
     mdiMagnify,
 } from '@mdi/js'
+import { clearColorObject, ColorPickerValue } from '@/plugins/helpers'
+import { DraggableChangeEvent } from '@/types/vuedraggable'
 
 @Component({
     components: { SettingsRow, draggable },
@@ -351,7 +353,7 @@ export default class SettingsMacrosTabExpert extends Mixins(BaseMixin, ThemeMixi
 
     private boolFormEdit = false
     private editGroupId: string | null = ''
-    private searchMacros: string = ''
+    private searchMacros: string | null = null
 
     get groupColors() {
         return [
@@ -396,12 +398,11 @@ export default class SettingsMacrosTabExpert extends Mixins(BaseMixin, ThemeMixi
     }
 
     get allMacros() {
+        const search = (this.searchMacros ?? '').toLowerCase()
         const macros = this.$store.getters['printer/getMacros'] ?? []
+
         return macros.filter((macro: PrinterStateMacro) => {
-            return (
-                macro.name.toLowerCase().includes(this.searchMacros.toLowerCase()) ||
-                macro.description?.toLowerCase().includes(this.searchMacros.toLowerCase())
-            )
+            return macro.name.toLowerCase().includes(search) || macro.description?.toLowerCase().includes(search)
         })
     }
 
@@ -438,12 +439,6 @@ export default class SettingsMacrosTabExpert extends Mixins(BaseMixin, ThemeMixi
         )
     }
 
-    clearColorObject(color: any): string {
-        if (typeof color === 'object' && 'hex' in color) color = color.hex
-        if (color.length > 7) color = color.substr(0, 7)
-        return color
-    }
-
     updateShowGeneral(newVal: boolean) {
         this.$emit('update:showGeneral', newVal)
     }
@@ -478,23 +473,40 @@ export default class SettingsMacrosTabExpert extends Mixins(BaseMixin, ThemeMixi
         })
     }
 
-    updateMacroFromGroup(macro: GuiMacrosStateMacrogroupMacro, option: string, value: boolean | string | number) {
+    updateMacroFromGroup(
+        macro: GuiMacrosStateMacrogroupMacro,
+        option: string,
+        value: boolean | string | number,
+        skipUpload: boolean = false
+    ) {
         this.$store.dispatch('gui/macros/updateMacroFromMacrogroup', {
             id: this.editGroupId,
             macro: macro.name,
             option: option,
             value: value,
+            skipUpload,
         })
     }
 
-    updateMacroOrder(output: any) {
-        const oldIndex = output.moved.oldIndex ?? 0
-        const newIndex = output.moved.newIndex ?? 0
-        const oldPos = this.editGroupMacros[oldIndex].pos
-        const newPos = this.editGroupMacros[newIndex].pos
+    updateMacroOrder(output: DraggableChangeEvent<GuiMacrosStateMacrogroupMacro>) {
+        if (!output.moved) return
 
-        this.updateMacroFromGroup(this.editGroupMacros[oldIndex], 'pos', newPos)
-        this.updateMacroFromGroup(this.editGroupMacros[newIndex], 'pos', oldPos)
+        const oldIndex = output.moved.oldIndex
+        const newIndex = output.moved.newIndex
+
+        const sortedMacros = [...this.editGroupMacros]
+        const positions = sortedMacros.map((macro) => macro.pos)
+
+        const [movedMacro] = sortedMacros.splice(oldIndex, 1)
+        sortedMacros.splice(newIndex, 0, movedMacro)
+
+        sortedMacros.forEach((macro, index) => {
+            if (macro.pos === positions[index]) return
+
+            this.updateMacroFromGroup(macro, 'pos', positions[index], true)
+        })
+
+        this.$store.dispatch('gui/macros/groupUpload', this.editGroupId)
     }
 
     changeColorMacroFromGroup(macro: GuiMacrosStateMacrogroupMacro) {
@@ -528,7 +540,7 @@ export default class SettingsMacrosTabExpert extends Mixins(BaseMixin, ThemeMixi
     }
 
     updateMacrogroupOption(option: string, newVal: boolean | string) {
-        const values: any = {}
+        const values: Record<string, boolean | string> = {}
         values[option] = newVal
 
         this.$store.dispatch('gui/macros/groupUpdate', {
@@ -547,8 +559,8 @@ export default class SettingsMacrosTabExpert extends Mixins(BaseMixin, ThemeMixi
     }
 
     @Debounce(250)
-    updateGroupOptionColorCustom(newVal: string) {
-        this.updateMacrogroupOption('colorCustom', this.clearColorObject(newVal))
+    updateGroupOptionColorCustom(newVal: ColorPickerValue) {
+        this.updateMacrogroupOption('colorCustom', clearColorObject(newVal))
     }
 
     updateGroupOptionShowInStandby(newVal: boolean) {

@@ -145,6 +145,7 @@
     "Buttons": {
         "Cancel": "Zrušit",
         "Close": "Zavřít",
+        "Confirm": "Potvrdit",
         "Delete": "Smazat",
         "No": "Ne",
         "Save": "Uložit",
@@ -597,6 +598,21 @@
         "Headline": "Manuální měření"
     },
     "Panels": {
+        "AfcPanel": {
+            "BufferDisabled": "Buffer není aktivní",
+            "Calibrate": "Kalibrovat",
+            "Color": "Barva",
+            "Detected": "Detekováno",
+            "EjectFilament": "Vysunout filament",
+            "Ejecting": "Vysunutí",
+            "Error": "Chyba",
+            "Functions": "Funkce",
+            "Material": "Materiál",
+            "MaterialSubtitle": "Například ABS, PETG, PLA atd.",
+            "SettingsDialog": {
+                "Help": "Nápověda"
+            }
+        },
         "ExtruderControlPanel": {
             "Allowed": "Povoleno",
             "CleanNozzle": "Vyčistit trysku",
@@ -692,11 +708,11 @@
                 "Empty": "prázdné"
             }
         },
-        "PowerControlPanel": {
-            "Error": "Chyba",
-            "Off": "Vypnuto",
-            "On": "Zapnuto",
-            "PowerControl": "Řízení napájení"
+        "MmuPanel": {
+            "TtgMapDialog": {
+                "Material": "Materiál",
+                "Temperature": "Teplota"
+            }
         },
         "SensorPanel" : {
             "Headline": "Data senzoru",
@@ -803,8 +819,6 @@
             "State": "Stav",
             "Target": "Cíl",
             "TemperaturesInChart": "Teplota [°C]",
-            "TempTooHigh": "Teplota pro {name} je příliš vysoká! (max.: {max})",
-            "TempTooLow": "Teplota pro {name} je příliš nízká! (min.: {min})",
             "TurnHeaterOff": "Vypnout ohřívač"
         },
         "ToolheadControlPanel": {

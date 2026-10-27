@@ -8,8 +8,7 @@
                 :width="spoolWidth"
                 v-bind="attrs"
                 :class="svgClasses"
-                v-on="on"
-                @click="selectGate">
+                v-on="on">
                 <defs>
                     <path
                         id="oval"
@@ -22,7 +21,7 @@
                     <path
                         id="espool"
                         d="M 89.561 35.5 L 60.333 15.734 c -0.308 -0.208 -0.704 -0.229 -1.029 -0.055 c -0.327 0.173 -0.531 0.513 -0.531 0.883 v 7.987 c -12.038 0.262 -26.306 5.201 -37.501 13.023 C 7.554 47.155 0 59.894 0 73.438 c 0 0.471 0.329 0.878 0.79 0.978 C 0.86 74.432 0.931 74.438 1 74.438 c 0.386 0 0.747 -0.225 0.911 -0.588 c 7.823 -17.312 26.952 -26.183 56.861 -26.376 v 8.62 c 0 0.37 0.204 0.71 0.531 0.883 c 0.325 0.173 0.722 0.153 1.029 -0.055 l 29.228 -19.766 C 89.835 36.971 90 36.661 90 36.329 S 89.835 35.686 89.561 35.5 z"
-                        stroke-width="2"
+                        stroke-width="3"
                         stroke="#CCCCCC"
                         fill="#808080"
                         opacity="0.7" />
@@ -62,7 +61,7 @@
                     <use href="#oval" style="filter: url(#blur_wheel2)" :fill="spoolWheelColor" />
                     <use href="#oval" transform="scale(0.41)" fill="#111111" />
                 </g>
-                <rect v-if="isSelected" x="0" y="314" width="258" height="186" fill="url(#spotlight)" />
+                <rect v-if="isSelected" x="0" y="260" width="258" height="186" fill="url(#spotlight)" />
 
                 <g v-if="showDetails">
                     <text
@@ -95,7 +94,7 @@
                     <use
                         v-if="isEspoolerAssist"
                         href="#espool"
-                        transform="translate(225,500) rotate(270) scale(2,-2)" />
+                        transform="translate(225,480) rotate(270) scale(2,-2)" />
                 </g>
             </svg>
         </template>
@@ -110,7 +109,13 @@
 import Component from 'vue-class-component'
 import { Mixins, Prop } from 'vue-property-decorator'
 import BaseMixin from '@/components/mixins/base'
-import MmuMixin, { GATE_EMPTY, GATE_UNKNOWN, NO_FILAMENT_COLOR } from '@/components/mixins/mmu'
+import MmuMixin, {
+    FILAMENT_POS_LOADED,
+    GATE_AVAILABLE,
+    GATE_EMPTY,
+    NO_FILAMENT_COLOR,
+    TOOL_GATE_BYPASS,
+} from '@/components/mixins/mmu'
 import { filamentTextColor } from '@/plugins/helpers'
 import { ServerSpoolmanStateSpool } from '@/store/server/spoolman/types'
 
@@ -130,7 +135,11 @@ export default class MmuUnitGateSpool extends Mixins(BaseMixin, MmuMixin) {
     }
 
     get status() {
-        return this.mmu?.gate_status?.[this.gateIndex] ?? GATE_UNKNOWN
+        if (this.gateIndex === TOOL_GATE_BYPASS) {
+            if (this.mmuFilamentPos === FILAMENT_POS_LOADED) return GATE_AVAILABLE
+            return GATE_EMPTY
+        }
+        return this.mmu?.gate_status?.[this.gateIndex] ?? GATE_EMPTY
     }
 
     get isNotEmpty() {
@@ -205,15 +214,17 @@ export default class MmuUnitGateSpool extends Mixins(BaseMixin, MmuMixin) {
     }
 
     get isEspoolerRewind() {
-        if (this.gateIndex !== this.mmu?.gate) return false
+        if (this.mmuEspoolers) return this.mmuEspoolers[this.gateIndex] === 'rewind'
 
-        return this.mmu?.espooler_active === 'rewind'
+        // Legacy Happy Hare (selected gate only)
+        return this.gateIndex === this.mmu?.gate && this.mmu?.espooler_active === 'rewind'
     }
 
     get isEspoolerAssist() {
-        if (this.gateIndex !== this.mmu?.gate) return false
+        if (this.mmuEspoolers) return this.mmuEspoolers[this.gateIndex] === 'assist'
 
-        return this.mmu?.espooler_active === 'assist'
+        // Legacy Happy Hare (selected gate only)
+        return this.gateIndex === this.mmu?.gate && this.mmu?.espooler_active === 'assist'
     }
 
     get spoolWidth() {
@@ -250,7 +261,7 @@ export default class MmuUnitGateSpool extends Mixins(BaseMixin, MmuMixin) {
             output.push(`${this.$t('Panels.MmuPanel.ToolTip.Color')}: ${color}`)
         }
 
-        if (this.spoolId) {
+        if (this.spoolId > 0) {
             output.push(`${this.$t('Panels.MmuPanel.ToolTip.SpoolId')}: ${this.spoolId}`)
         }
 
@@ -259,19 +270,10 @@ export default class MmuUnitGateSpool extends Mixins(BaseMixin, MmuMixin) {
 
     get svgClasses() {
         const classes = [this.svgClass]
-        if (this.hasSelectGateListener) classes.push('hasSelectGate')
         if (this.isSelected) classes.push('isSelected')
         if (!this.isSelected && this.unhighlightSpools) classes.push('unhighlighted')
 
         return classes
-    }
-
-    get hasSelectGateListener() {
-        return !!this.$listeners['select-gate']
-    }
-
-    selectGate() {
-        this.$emit('select-gate')
     }
 }
 </script>
@@ -279,7 +281,6 @@ export default class MmuUnitGateSpool extends Mixins(BaseMixin, MmuMixin) {
 <style scoped>
 svg {
     outline: none;
-    cursor: pointer;
     transition:
         transform 0.2s,
         opacity 0.2s;
@@ -294,7 +295,7 @@ svg.isSelected {
     opacity: 1 !important;
 }
 
-svg.hasSelectGate:hover {
+svg:hover {
     transform: translateY(-4px);
 }
 

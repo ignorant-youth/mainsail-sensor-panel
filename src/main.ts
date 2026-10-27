@@ -9,8 +9,6 @@ import router from '@/plugins/router'
 import { WebSocketPlugin } from '@/plugins/webSocketClient'
 // vue-observe-visibility
 import { ObserveVisibility } from 'vue-observe-visibility'
-//vue-meta
-import VueMeta from 'vue-meta'
 //vue-load-image
 import VueLoadImage from 'vue-load-image'
 //vue-toast-notifications
@@ -38,9 +36,7 @@ Vue.config.productionTip = false
 
 Vue.directive('observe-visibility', ObserveVisibility)
 
-Vue.use(VueMeta)
-
-Vue.component('VueLoadImage', VueLoadImage)
+Vue.component('VueLoadImage', VueLoadImage.default ?? VueLoadImage)
 
 Vue.use(VueToast, {
     duration: 3000,

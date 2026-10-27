@@ -1,6 +1,6 @@
-import vue from '@vitejs/plugin-vue2'
+import vue from '@pedrolamas/plugin-vue2'
 import version from 'vite-plugin-package-version'
-import { defineConfig } from 'vite'
+import { defineConfig } from 'vitest/config'
 
 import Components from 'unplugin-vue-components/vite'
 import { VuetifyResolver } from 'unplugin-vue-components/resolvers'
@@ -11,7 +11,6 @@ import buildVersion from './src/plugins/build-version'
 import buildReleaseInfo from './src/plugins/build-release_info'
 import { VitePWA, VitePWAOptions } from 'vite-plugin-pwa'
 import postcssNesting from 'postcss-nesting'
-import VueI18nPlugin from '@intlify/unplugin-vue-i18n/vite'
 
 const PWAConfig: Partial<VitePWAOptions> = {
     registerType: 'autoUpdate',
@@ -26,12 +25,18 @@ const PWAConfig: Partial<VitePWAOptions> = {
         background_color: '#121212',
         icons: [
             {
-                src: '/img/icons/icon-192-maskable.png',
+                src: '/img/icons/icon-192.png',
                 sizes: '192x192',
                 type: 'image/png',
             },
             {
-                src: '/img/icons/icon-512-maskable.png',
+                src: '/img/icons/icon-192-maskable.png',
+                sizes: '192x192',
+                type: 'image/png',
+                purpose: 'maskable',
+            },
+            {
+                src: '/img/icons/icon-512.png',
                 sizes: '512x512',
                 type: 'image/png',
             },
@@ -39,7 +44,7 @@ const PWAConfig: Partial<VitePWAOptions> = {
                 src: '/img/icons/icon-512-maskable.png',
                 sizes: '512x512',
                 type: 'image/png',
-                purpose: 'any maskable',
+                purpose: 'maskable',
             },
         ],
     },
@@ -86,13 +91,19 @@ export default defineConfig({
             dts: true, // enabled by default if `typescript` is installed
             resolvers: [VuetifyResolver()],
         }),
-        VueI18nPlugin({
-            strictMessage: false, // allow HTML tags in translation
-            escapeHtml: false, // allow HTML tags in translation
-        }),
     ],
 
     css: {
+        preprocessorOptions: {
+            sass: {
+                silenceDeprecations: ['import', 'global-builtin', 'slash-div', 'if-function'],
+                quietDeps: true,
+            },
+            scss: {
+                silenceDeprecations: ['import', 'global-builtin', 'slash-div', 'if-function'],
+                quietDeps: true,
+            },
+        },
         postcss: {
             plugins: [postcssNesting()],
         },
@@ -100,28 +111,20 @@ export default defineConfig({
 
     build: {
         target: 'safari12',
-        rollupOptions: {
+        rolldownOptions: {
             output: {
                 manualChunks: (id: string) => {
-                    if (id.includes('node_modules')) {
-                        // split codemirror into its own chunk
-                        if (id.includes('/codemirror/') || id.includes('/@codemirror/')) {
-                            return 'codemirror'
-                        }
+                    if (!id.includes('node_modules')) return
 
-                        // split these libs into their own chunks
-                        const chunkedLibs = ['vuetify', 'echarts', 'overlayscrollbars']
-                        for (const lib of chunkedLibs) {
-                            if (id.includes(`/node_modules/${lib}/`)) {
-                                return lib.replace('.js', '')
-                            }
+                    // split these libs (incl. their @lib/* scoped packages) into their own chunks
+                    const chunkedLibs = ['codemirror', 'vuetify', 'echarts', 'overlayscrollbars']
+                    for (const lib of chunkedLibs) {
+                        if (id.includes(`/node_modules/${lib}/`) || id.includes(`/node_modules/@${lib}/`)) {
+                            return lib
                         }
                     }
                 },
             },
-        },
-        commonjsOptions: {
-            transformMixedEsModules: true,
         },
     },
 
@@ -134,17 +137,31 @@ export default defineConfig({
         },
     },
 
+    // 'global' is required by node polyfills (stream-browserify, events) at runtime
+    define: {
+        global: 'globalThis',
+    },
+
+    // Vite 8 transforms TS via Oxc, which (unlike the build) does not auto-detect
+    // experimentalDecorators from tsconfig in per-file transforms (e.g. Vitest).
+    // Vue 2 class components rely on legacy decorators, so enable them explicitly.
+    oxc: {
+        decorator: {
+            legacy: true,
+        },
+    },
+
     optimizeDeps: {
         include: ['events'],
-        esbuildOptions: {
-            define: {
-                global: 'globalThis',
-            },
-        },
     },
 
     server: {
         host: '0.0.0.0',
         port: 8080,
+    },
+
+    test: {
+        environment: 'node',
+        include: ['tests/**/*.spec.ts'],
     },
 })

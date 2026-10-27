@@ -685,12 +685,6 @@
                 "Empty": "Vacío"
             }
         },
-        "PowerControlPanel": {
-            "Error": "Error",
-            "Off": "Apagado",
-            "On": "Encendido",
-            "PowerControl": "Control de energía"
-        },
         "SensorPanel" : {
             "Headline": "Datos del sensor",
             "ShowNameInChart": "Mostrar sensor en el gráfico"
@@ -789,9 +783,7 @@
             "ShowNameInList": "Mostrar {name} en el listado",
             "State": "Estado",
             "Target": "Objetivo",
-            "TemperaturesInChart": "Temperatura [°C]",
-            "TempTooHigh": "¡Temperatura muy alta para {name}! (max: {max})",
-            "TempTooLow": "¡Temperatura muy baja para {name}! (min: {min})"
+            "TemperaturesInChart": "Temperatura [°C]"
         },
         "ToolheadControlPanel": {
             "Absolute": "absoluta",

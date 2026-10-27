@@ -67,7 +67,7 @@ import BaseMixin from '@/components/mixins/base'
 import MmuMixin, { GATE_UNKNOWN, TOOL_GATE_BYPASS } from '@/components/mixins/mmu'
 import { FileStateGcodefile } from '@/store/files/types'
 import Vue from 'vue'
-import { colorsMatch, convertStringToArray } from '@/plugins/helpers'
+import { colorsMatch, convertStringToArray, getFileFilamentColors } from '@/plugins/helpers'
 
 @Component
 export default class MmuEditTtgMapDialogDetails extends Mixins(BaseMixin, MmuMixin) {
@@ -92,10 +92,8 @@ export default class MmuEditTtgMapDialogDetails extends Mixins(BaseMixin, MmuMix
     }
 
     get fileFilamentColor() {
-        let colors = this.file?.extruder_colors ?? []
-        if (['BambuStudio', 'OrcaSlicer'].includes(this.file?.slicer ?? '')) {
-            colors = this.file?.filament_colors ?? []
-        }
+        if (!this.file) return ''
+        const colors = getFileFilamentColors(this.file)
 
         return this.formColorString(colors[this.tool] ?? '')
     }
@@ -135,7 +133,7 @@ export default class MmuEditTtgMapDialogDetails extends Mixins(BaseMixin, MmuMix
 
     get gateItems() {
         const gates = []
-        for (let i = 0; i < this.mmu?.num_gates!; i++) {
+        for (let i = 0; i < (this.mmu?.num_gates ?? 0); i++) {
             gates.push(i)
         }
 
